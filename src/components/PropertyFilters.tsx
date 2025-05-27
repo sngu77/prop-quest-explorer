@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FilterState } from "@/types/property";
+import { X } from "lucide-react";
 
 interface PropertyFiltersProps {
   filters: FilterState;
@@ -72,7 +72,7 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-        <Button variant="outline" onClick={resetFilters}>
+        <Button variant="ghost" onClick={resetFilters} className="text-[#1277e1] hover:text-[#0d6bc2]">
           Reset All
         </Button>
       </div>
@@ -99,12 +99,12 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
 
         {/* Bedrooms */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">Bedrooms</Label>
+          <Label className="text-sm font-medium text-gray-700">Beds</Label>
           <Select 
             value={localFilters.bedrooms === 0 ? "any" : localFilters.bedrooms.toString()}
             onValueChange={handleBedroomsChange}
           >
-            <SelectTrigger>
+            <SelectTrigger className="border-gray-200">
               <SelectValue placeholder="Any" />
             </SelectTrigger>
             <SelectContent>
@@ -120,12 +120,12 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
 
         {/* Bathrooms */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">Bathrooms</Label>
+          <Label className="text-sm font-medium text-gray-700">Baths</Label>
           <Select 
             value={localFilters.bathrooms === 0 ? "any" : localFilters.bathrooms.toString()}
             onValueChange={handleBathroomsChange}
           >
-            <SelectTrigger>
+            <SelectTrigger className="border-gray-200">
               <SelectValue placeholder="Any" />
             </SelectTrigger>
             <SelectContent>
@@ -140,9 +140,9 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
 
         {/* Property Type */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">Property Type</Label>
+          <Label className="text-sm font-medium text-gray-700">Home Type</Label>
           <Select value={localFilters.propertyType} onValueChange={handlePropertyTypeChange}>
-            <SelectTrigger>
+            <SelectTrigger className="border-gray-200">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
             <SelectContent>
@@ -158,7 +158,7 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
 
       {/* Amenities */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-700">Amenities</Label>
+        <Label className="text-sm font-medium text-gray-700">Features</Label>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {amenitiesList.map((amenity) => (
             <div key={amenity} className="flex items-center space-x-2">
@@ -166,6 +166,7 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
                 id={amenity}
                 checked={localFilters.amenities.includes(amenity)}
                 onCheckedChange={(checked) => handleAmenityChange(amenity, checked as boolean)}
+                className="border-gray-300 data-[state=checked]:bg-[#1277e1] data-[state=checked]:border-[#1277e1]"
               />
               <Label htmlFor={amenity} className="text-sm text-gray-600 cursor-pointer">
                 {amenity}
@@ -174,6 +175,26 @@ const PropertyFilters = ({ filters, onFiltersChange }: PropertyFiltersProps) => 
           ))}
         </div>
       </div>
+
+      {/* Active Filters */}
+      {localFilters.amenities.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-4 border-t">
+          {localFilters.amenities.map((amenity) => (
+            <div
+              key={amenity}
+              className="flex items-center space-x-1 bg-gray-100 rounded-full px-3 py-1 text-sm"
+            >
+              <span>{amenity}</span>
+              <button
+                onClick={() => handleAmenityChange(amenity, false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

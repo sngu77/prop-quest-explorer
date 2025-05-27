@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Heart, Bed, Bath, Square, MapPin } from "lucide-react";
+import { Heart, Bed, Bath, Square, MapPin, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +24,8 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "for-sale": return "bg-green-500";
-      case "for-rent": return "bg-blue-500";
+      case "for-sale": return "bg-emerald-600";
+      case "for-rent": return "bg-blue-600";
       case "sold": return "bg-gray-500";
       case "pending": return "bg-yellow-500";
       default: return "bg-gray-500";
@@ -38,10 +37,10 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   };
 
   return (
-    <Card className="group cursor-pointer overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+    <Card className="group cursor-pointer overflow-hidden hover:shadow-lg transition-all duration-300 border-gray-200">
       <div className="relative" onClick={handleCardClick}>
         {/* Image Carousel */}
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-56 overflow-hidden">
           <img
             src={property.images[currentImageIndex]}
             alt={property.title}
@@ -70,7 +69,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           <Badge 
             className={`absolute top-3 left-3 text-white ${getStatusColor(property.status)}`}
           >
-            {property.status.replace("-", " ").toUpperCase()}
+            {property.status === "for-sale" ? "For Sale" : 
+             property.status === "for-rent" ? "For Rent" :
+             property.status.toUpperCase()}
           </Badge>
 
           {/* Favorite Button */}
@@ -87,23 +88,23 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           </Button>
         </div>
 
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           {/* Price */}
           <div className="mb-2">
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-xl font-bold text-gray-900">
               {formatPrice(property.price)}
             </span>
           </div>
 
           {/* Property Details */}
-          <div className="flex items-center space-x-4 mb-3 text-gray-600">
+          <div className="flex items-center space-x-4 mb-3 text-gray-600 text-sm">
             <div className="flex items-center space-x-1">
               <Bed className="w-4 h-4" />
-              <span>{property.bedrooms} bed</span>
+              <span>{property.bedrooms} bd</span>
             </div>
             <div className="flex items-center space-x-1">
               <Bath className="w-4 h-4" />
-              <span>{property.bathrooms} bath</span>
+              <span>{property.bathrooms} ba</span>
             </div>
             <div className="flex items-center space-x-1">
               <Square className="w-4 h-4" />
@@ -112,31 +113,24 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           </div>
 
           {/* Title */}
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+          <h3 className="text-base font-medium text-gray-900 mb-1 group-hover:text-emerald-600 transition-colors line-clamp-1">
             {property.title}
           </h3>
 
           {/* Address */}
-          <div className="flex items-center space-x-1 text-gray-600 mb-4">
+          <div className="flex items-center space-x-1 text-gray-600 mb-2">
             <MapPin className="w-4 h-4" />
-            <span className="text-sm">{property.address}, {property.city}, {property.state}</span>
+            <span className="text-sm line-clamp-1">{property.address}, {property.city}, {property.state}</span>
           </div>
 
-          {/* Property Type */}
-          <Badge variant="outline" className="mb-3">
-            {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
-          </Badge>
-
-          {/* Agent Info */}
-          <div className="flex items-center space-x-3 pt-3 border-t">
-            <img
-              src={property.agent.image}
-              alt={property.agent.name}
-              className="w-8 h-8 rounded-full object-cover"
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">{property.agent.name}</p>
-              <p className="text-xs text-gray-500">{property.agent.phone}</p>
+          {/* Property Type and Listed Date */}
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <Badge variant="outline" className="border-gray-200">
+              {property.type.charAt(0).toUpperCase() + property.type.slice(1)}
+            </Badge>
+            <div className="flex items-center space-x-1">
+              <Calendar className="w-4 h-4" />
+              <span>Listed {new Date(property.listedDate).toLocaleDateString()}</span>
             </div>
           </div>
         </CardContent>
