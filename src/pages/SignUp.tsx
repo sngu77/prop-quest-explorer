@@ -61,10 +61,10 @@ const SignUp = () => {
       });
 
       navigate('/signin');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'An error occurred during sign up',
         variant: 'destructive',
       });
     } finally {

@@ -53,10 +53,10 @@ const SignIn = () => {
       });
 
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'An error occurred during sign in',
         variant: 'destructive',
       });
     } finally {
@@ -80,6 +80,13 @@ const SignIn = () => {
               create a new account
             </Link>
           </p>
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              <strong>Demo credentials:</strong><br />
+              Email: demo@example.com<br />
+              Password: password
+            </p>
+          </div>
         </div>
 
         <Form {...form}>
