@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -87,6 +88,13 @@ const SignIn = () => {
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center text-sm text-gray-600 hover:text-[#1277e1] mb-4 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Return to Home
+            </Link>
             <h1 className="text-3xl font-bold text-[#1277e1] mb-2">PropertyQuest</h1>
             <h2 className="text-2xl font-bold text-gray-900">
               Sign in to your account
