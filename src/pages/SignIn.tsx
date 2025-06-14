@@ -30,33 +30,45 @@ const SignIn = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: 'demo@example.com',
+      password: 'password',
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting sign in with:', values);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
+
+      console.log('Sign in response:', { data, error });
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: 'Success',
-        description: 'You have successfully signed in',
-      });
+      if (data?.user) {
+        toast({
+          title: 'Success!',
+          description: `Welcome back, ${data.user.email}!`,
+        });
 
-      navigate('/');
+        // Small delay to show the success message
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      } else {
+        throw new Error('Sign in failed - no user data returned');
+      }
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'An error occurred during sign in',
+        title: 'Sign In Failed',
+        description: error.message || 'An error occurred during sign in. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -64,13 +76,22 @@ const SignIn = () => {
     }
   };
 
+  const handleDemoSignIn = () => {
+    form.setValue('email', 'demo@example.com');
+    form.setValue('password', 'password');
+    form.handleSubmit(onSubmit)();
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-[#1277e1] mb-2">PropertyQuest</h1>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Sign in to your account
+            </h2>
+          </div>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link
@@ -81,11 +102,17 @@ const SignIn = () => {
             </Link>
           </p>
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">
-              <strong>Demo credentials:</strong><br />
-              Email: demo@example.com<br />
-              Password: password
+            <p className="text-sm text-blue-700 mb-3">
+              <strong>Demo Mode:</strong> Use any valid email and password (6+ characters) to sign in.
             </p>
+            <Button 
+              onClick={handleDemoSignIn}
+              variant="outline" 
+              className="w-full text-blue-700 border-blue-300 hover:bg-blue-100"
+              disabled={isLoading}
+            >
+              Quick Demo Sign In
+            </Button>
           </div>
         </div>
 

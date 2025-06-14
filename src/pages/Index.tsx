@@ -1,17 +1,23 @@
-import { useState } from "react";
-import { Search, MapPin, Filter, Grid, Map, Home, Building2, House, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, MapPin, Filter, Grid, Map, Home, Building2, House, ChevronDown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PropertyCard from "@/components/PropertyCard";
 import PropertyFilters from "@/components/PropertyFilters";
 import MapView from "@/components/MapView";
 import { mockProperties } from "@/data/mockProperties";
 import { Property, FilterState } from "@/types/property";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [showFilters, setShowFilters] = useState(false);
   const [searchLocation, setSearchLocation] = useState("");
+  const [user, setUser] = useState<any>(null);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 2000000],
     bedrooms: 0,
@@ -19,6 +25,36 @@ const Index = () => {
     propertyType: "all",
     amenities: []
   });
+
+  useEffect(() => {
+    // Check for existing user session
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user);
+    };
+    
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      toast({
+        title: "Signed out",
+        description: "You have been successfully signed out.",
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   const filteredProperties = mockProperties.filter((property) => {
     const matchesPrice = property.price >= filters.priceRange[0] && property.price <= filters.priceRange[1];
@@ -66,9 +102,37 @@ const Index = () => {
               <Button variant="ghost" className="text-gray-700 hover:text-[#1277e1]">
                 Help
               </Button>
-              <Button variant="default" className="bg-[#1277e1] hover:bg-[#0d6bc2]">
-                Sign in
-              </Button>
+              
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center space-x-2">
+                      <User className="w-4 h-4" />
+                      <span>{user.email?.split('@')[0] || 'User'}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/favorites')}>
+                      Favorites
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="default" 
+                  className="bg-[#1277e1] hover:bg-[#0d6bc2]"
+                  onClick={() => navigate('/signin')}
+                >
+                  Sign in
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -81,6 +145,11 @@ const Index = () => {
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Find Your Perfect Home
             </h2>
+            {user && (
+              <p className="text-xl opacity-90">
+                Welcome back, {user.email?.split('@')[0]}!
+              </p>
+            )}
           </div>
           
           {/* Search Bar */}
