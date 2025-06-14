@@ -99,7 +99,11 @@ const Index = () => {
               <Button variant="ghost" className="text-gray-700 hover:text-[#1277e1]">
                 Advertise
               </Button>
-              <Button variant="ghost" className="text-gray-700 hover:text-[#1277e1]">
+              <Button 
+                variant="ghost" 
+                className="text-gray-700 hover:text-[#1277e1]"
+                onClick={() => navigate('/help')}
+              >
                 Help
               </Button>
               
