@@ -1,17 +1,18 @@
-
 import { Search, MapPin, Filter, User, Menu, X, Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PropertyCard from '@/components/PropertyCard';
 import PropertyFilters from '@/components/PropertyFilters';
 import MapView from '@/components/MapView';
 import { mockProperties } from '@/data/mockProperties';
 import { FilterState } from '@/types/property';
+import { supabase } from '@/lib/supabase';
 
 const Index = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 2000000],
     bedrooms: 0,
@@ -19,6 +20,20 @@ const Index = () => {
     propertyType: "all",
     amenities: []
   });
+
+  useEffect(() => {
+    // Check initial auth state
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleFiltersChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -40,27 +55,40 @@ const Index = () => {
               <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Buy</a>
               <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Rent</a>
               <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Sell</a>
-              <Link to="/manage-rentals" className="text-gray-700 hover:text-[#1277e1] transition-colors flex items-center">
-                <Building2 className="h-4 w-4 mr-1" />
-                Manage Rentals
-              </Link>
+              {isAuthenticated && (
+                <Link to="/manage-rentals" className="text-gray-700 hover:text-[#1277e1] transition-colors flex items-center">
+                  <Building2 className="h-4 w-4 mr-1" />
+                  Manage Rentals
+                </Link>
+              )}
               <Link to="/help" className="text-gray-700 hover:text-[#1277e1] transition-colors">Help</Link>
             </nav>
 
             {/* Desktop User Menu */}
             <div className="hidden md:flex items-center space-x-4">
-              <Link
-                to="/signin"
-                className="text-gray-700 hover:text-[#1277e1] transition-colors"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-[#1277e1] text-white px-4 py-2 rounded-lg hover:bg-[#0f5bb8] transition-colors"
-              >
-                Sign Up
-              </Link>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => supabase.auth.signOut()}
+                  className="text-gray-700 hover:text-[#1277e1] transition-colors"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <>
+                  <Link
+                    to="/signin"
+                    className="text-gray-700 hover:text-[#1277e1] transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="bg-[#1277e1] text-white px-4 py-2 rounded-lg hover:bg-[#0f5bb8] transition-colors"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -81,24 +109,37 @@ const Index = () => {
                 <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Buy</a>
                 <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Rent</a>
                 <a href="#" className="text-gray-700 hover:text-[#1277e1] transition-colors">Sell</a>
-                <Link to="/manage-rentals" className="text-gray-700 hover:text-[#1277e1] transition-colors flex items-center">
-                  <Building2 className="h-4 w-4 mr-1" />
-                  Manage Rentals
-                </Link>
+                {isAuthenticated && (
+                  <Link to="/manage-rentals" className="text-gray-700 hover:text-[#1277e1] transition-colors flex items-center">
+                    <Building2 className="h-4 w-4 mr-1" />
+                    Manage Rentals
+                  </Link>
+                )}
                 <Link to="/help" className="text-gray-700 hover:text-[#1277e1] transition-colors">Help</Link>
                 <div className="pt-4 border-t">
-                  <Link
-                    to="/signin"
-                    className="block text-gray-700 hover:text-[#1277e1] transition-colors mb-2"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/signup"
-                    className="block bg-[#1277e1] text-white px-4 py-2 rounded-lg hover:bg-[#0f5bb8] transition-colors text-center"
-                  >
-                    Sign Up
-                  </Link>
+                  {isAuthenticated ? (
+                    <button
+                      onClick={() => supabase.auth.signOut()}
+                      className="block text-gray-700 hover:text-[#1277e1] transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  ) : (
+                    <>
+                      <Link
+                        to="/signin"
+                        className="block text-gray-700 hover:text-[#1277e1] transition-colors mb-2"
+                      >
+                        Sign In
+                      </Link>
+                      <Link
+                        to="/signup"
+                        className="block bg-[#1277e1] text-white px-4 py-2 rounded-lg hover:bg-[#0f5bb8] transition-colors text-center"
+                      >
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
                 </div>
               </nav>
             </div>
