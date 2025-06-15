@@ -1,3 +1,4 @@
+
 import { Search, MapPin, Filter, User, Menu, X, Building2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -7,12 +8,17 @@ import MapView from '@/components/MapView';
 import { mockProperties } from '@/data/mockProperties';
 import { FilterState } from '@/types/property';
 import { supabase } from '@/lib/supabase';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const Index = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [searchLocation, setSearchLocation] = useState('');
+  const [selectedPropertyType, setSelectedPropertyType] = useState('all');
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 2000000],
     bedrooms: 0,
@@ -37,6 +43,11 @@ const Index = () => {
 
   const handleFiltersChange = (newFilters: FilterState) => {
     setFilters(newFilters);
+  };
+
+  const handleSearch = () => {
+    console.log('Searching for:', { location: searchLocation, propertyType: selectedPropertyType });
+    // Here you would implement the actual search logic
   };
 
   return (
@@ -148,52 +159,84 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-[#1277e1] to-[#0f5bb8] text-white py-16">
+      <section className="bg-gradient-to-br from-[#1277e1] to-[#0f5bb8] text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6">
               Find Your Perfect Home
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
-              Discover amazing properties in your favorite neighborhoods
+            <p className="text-xl text-blue-100 mb-12 max-w-2xl mx-auto">
+              Discover amazing properties in your favorite neighborhoods with our advanced search
             </p>
           </div>
 
-          {/* Search Bar */}
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+          {/* Enhanced Search Bar */}
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+                {/* Location Input */}
+                <div className="lg:col-span-5">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
                     Location
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <input
+                    <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
                       type="text"
-                      placeholder="Enter city, neighborhood, or ZIP"
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1277e1] focus:border-transparent text-gray-900"
+                      placeholder="Enter city, neighborhood, or ZIP code"
+                      value={searchLocation}
+                      onChange={(e) => setSearchLocation(e.target.value)}
+                      className="pl-12 h-14 text-base border-2 border-gray-200 focus:border-[#1277e1] rounded-lg transition-colors"
                     />
                   </div>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Property Type Select */}
+                <div className="lg:col-span-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
                     Property Type
                   </label>
-                  <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1277e1] focus:border-transparent text-gray-900">
-                    <option>All Types</option>
-                    <option>House</option>
-                    <option>Apartment</option>
-                    <option>Condo</option>
-                    <option>Townhouse</option>
-                  </select>
+                  <Select value={selectedPropertyType} onValueChange={setSelectedPropertyType}>
+                    <SelectTrigger className="h-14 text-base border-2 border-gray-200 focus:border-[#1277e1] rounded-lg">
+                      <SelectValue placeholder="Select property type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="house">House</SelectItem>
+                      <SelectItem value="apartment">Apartment</SelectItem>
+                      <SelectItem value="condo">Condo</SelectItem>
+                      <SelectItem value="townhouse">Townhouse</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                <div className="flex items-end">
-                  <button className="w-full bg-[#1277e1] text-white px-6 py-3 rounded-lg hover:bg-[#0f5bb8] transition-colors flex items-center justify-center">
+                {/* Search Button */}
+                <div className="lg:col-span-3">
+                  <Button 
+                    onClick={handleSearch}
+                    className="w-full h-14 bg-[#1277e1] hover:bg-[#0f5bb8] text-white font-semibold text-base rounded-lg transition-colors shadow-lg hover:shadow-xl"
+                  >
                     <Search className="h-5 w-5 mr-2" />
-                    Search
+                    Search Properties
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Quick Filters */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex flex-wrap gap-3">
+                  <span className="text-sm font-medium text-gray-600">Popular searches:</span>
+                  <button className="text-sm text-[#1277e1] hover:text-[#0f5bb8] font-medium transition-colors">
+                    Houses under $500K
+                  </button>
+                  <button className="text-sm text-[#1277e1] hover:text-[#0f5bb8] font-medium transition-colors">
+                    3+ Bedrooms
+                  </button>
+                  <button className="text-sm text-[#1277e1] hover:text-[#0f5bb8] font-medium transition-colors">
+                    New Listings
+                  </button>
+                  <button className="text-sm text-[#1277e1] hover:text-[#0f5bb8] font-medium transition-colors">
+                    Pet Friendly
                   </button>
                 </div>
               </div>
