@@ -1,3 +1,4 @@
+
 import { Search, MapPin, Filter, User, Menu, X, Building2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -5,11 +6,23 @@ import PropertyCard from '@/components/PropertyCard';
 import PropertyFilters from '@/components/PropertyFilters';
 import MapView from '@/components/MapView';
 import { mockProperties } from '@/data/mockProperties';
+import { FilterState } from '@/types/property';
 
 const Index = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    priceRange: [0, 2000000],
+    bedrooms: 0,
+    bathrooms: 0,
+    propertyType: "all",
+    amenities: []
+  });
+
+  const handleFiltersChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -186,7 +199,7 @@ const Index = () => {
         {/* Filters */}
         {showFilters && (
           <div className="mb-6">
-            <PropertyFilters />
+            <PropertyFilters filters={filters} onFiltersChange={handleFiltersChange} />
           </div>
         )}
 
