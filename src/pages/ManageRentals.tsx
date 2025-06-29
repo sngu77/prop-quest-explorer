@@ -13,6 +13,9 @@ import PropertyForm from '@/components/property/PropertyForm';
 import PropertyCard from '@/components/property/PropertyCard';
 import RentalApplications from '@/components/rental/RentalApplications';
 import RentalIncome from '@/components/rental/RentalIncome';
+import TenantCommunication from '@/components/tenant/TenantCommunication';
+import MaintenanceManager from '@/components/maintenance/MaintenanceManager';
+import FinancialReports from '@/components/financial/FinancialReports';
 
 const ManageRentals = () => {
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
@@ -381,12 +384,15 @@ const ManageRentals = () => {
           </Card>
         </div>
 
-        {/* Tabs */}
+        {/* Enhanced Tabs with New Features */}
         <Tabs defaultValue="properties" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="properties">My Properties ({userProperties.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="properties">Properties ({userProperties.length})</TabsTrigger>
             <TabsTrigger value="applications">Applications</TabsTrigger>
             <TabsTrigger value="income">Income</TabsTrigger>
+            <TabsTrigger value="communication">Communication</TabsTrigger>
+            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="properties">
@@ -399,6 +405,18 @@ const ManageRentals = () => {
 
           <TabsContent value="income">
             <RentalIncome />
+          </TabsContent>
+
+          <TabsContent value="communication">
+            <TenantCommunication />
+          </TabsContent>
+
+          <TabsContent value="maintenance">
+            <MaintenanceManager />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <FinancialReports />
           </TabsContent>
         </Tabs>
       </main>
