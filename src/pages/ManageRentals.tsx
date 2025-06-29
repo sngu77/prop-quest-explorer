@@ -1,6 +1,6 @@
 import { ArrowLeft, Plus, Building2, Users, DollarSign, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,49 +10,56 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { propertyService, type Property } from '@/lib/database';
 import RentalApplications from '@/components/rental/RentalApplications';
 import RentalIncome from '@/components/rental/RentalIncome';
 
-interface UserProperty {
-  id: string;
-  title: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  rent: number;
-  bedrooms: string;
-  bathrooms: string;
-  sqft: string;
-  type: string;
-  description: string;
-  amenities: string;
-  dateAdded: string;
-}
-
 const ManageRentals = () => {
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
-  const [userProperties, setUserProperties] = useState<UserProperty[]>([]);
+  const [userProperties, setUserProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [propertyForm, setPropertyForm] = useState({
     title: '',
     address: '',
     city: '',
     state: '',
-    zipCode: '',
+    zip_code: '',
     rent: '',
     bedrooms: '',
     bathrooms: '',
     sqft: '',
-    type: '',
+    property_type: '',
     description: '',
     amenities: ''
   });
+
+  // Load properties on component mount
+  useEffect(() => {
+    loadProperties();
+  }, []);
+
+  const loadProperties = async () => {
+    try {
+      setIsLoading(true);
+      const properties = await propertyService.getProperties();
+      setUserProperties(properties);
+    } catch (error) {
+      console.error('Error loading properties:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load properties. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddProperty = () => {
     setIsAddPropertyOpen(true);
   };
 
-  const handleSubmitProperty = (e: React.FormEvent) => {
+  const handleSubmitProperty = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
@@ -65,48 +72,58 @@ const ManageRentals = () => {
       return;
     }
 
-    // Create new property object
-    const newProperty: UserProperty = {
-      id: Date.now().toString(),
-      title: propertyForm.title,
-      address: propertyForm.address,
-      city: propertyForm.city,
-      state: propertyForm.state,
-      zipCode: propertyForm.zipCode,
-      rent: parseFloat(propertyForm.rent),
-      bedrooms: propertyForm.bedrooms,
-      bathrooms: propertyForm.bathrooms,
-      sqft: propertyForm.sqft,
-      type: propertyForm.type,
-      description: propertyForm.description,
-      amenities: propertyForm.amenities,
-      dateAdded: new Date().toISOString()
-    };
+    try {
+      // Create new property object
+      const newProperty = {
+        title: propertyForm.title,
+        address: propertyForm.address,
+        city: propertyForm.city,
+        state: propertyForm.state,
+        zip_code: propertyForm.zip_code,
+        rent: parseFloat(propertyForm.rent),
+        bedrooms: propertyForm.bedrooms,
+        bathrooms: propertyForm.bathrooms,
+        sqft: propertyForm.sqft,
+        property_type: propertyForm.property_type,
+        description: propertyForm.description,
+        amenities: propertyForm.amenities
+      };
 
-    // Add to properties list
-    setUserProperties(prev => [...prev, newProperty]);
-    
-    toast({
-      title: "Success",
-      description: "Property added successfully!"
-    });
+      // Save to database
+      await propertyService.addProperty(newProperty);
+      
+      // Reload properties
+      await loadProperties();
+      
+      toast({
+        title: "Success",
+        description: "Property added successfully!"
+      });
 
-    // Reset form and close dialog
-    setPropertyForm({
-      title: '',
-      address: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      rent: '',
-      bedrooms: '',
-      bathrooms: '',
-      sqft: '',
-      type: '',
-      description: '',
-      amenities: ''
-    });
-    setIsAddPropertyOpen(false);
+      // Reset form and close dialog
+      setPropertyForm({
+        title: '',
+        address: '',
+        city: '',
+        state: '',
+        zip_code: '',
+        rent: '',
+        bedrooms: '',
+        bathrooms: '',
+        sqft: '',
+        property_type: '',
+        description: '',
+        amenities: ''
+      });
+      setIsAddPropertyOpen(false);
+    } catch (error) {
+      console.error('Error adding property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add property. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -116,116 +133,139 @@ const ManageRentals = () => {
     }));
   };
 
-  const handleDeleteProperty = (id: string) => {
-    setUserProperties(prev => prev.filter(property => property.id !== id));
-    toast({
-      title: "Property Deleted",
-      description: "Property has been removed from your portfolio."
-    });
+  const handleDeleteProperty = async (id: string) => {
+    try {
+      await propertyService.deleteProperty(id);
+      await loadProperties();
+      toast({
+        title: "Property Deleted",
+        description: "Property has been removed from your portfolio."
+      });
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete property. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Custom Properties Component
-  const UserPropertiesComponent = () => (
-    <div className="space-y-6">
-      {userProperties.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Yet</h3>
-            <p className="text-gray-600 mb-4">Start building your rental portfolio by adding your first property.</p>
-            <Button 
-              onClick={handleAddProperty}
-              className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Property
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {userProperties.map((property) => (
-            <Card key={property.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{property.title}</CardTitle>
-                    <CardDescription className="flex items-center mt-1">
-                      {property.address}
-                      {property.city && `, ${property.city}`}
-                      {property.state && `, ${property.state}`}
-                    </CardDescription>
+  const UserPropertiesComponent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1277e1] mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading properties...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {userProperties.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Yet</h3>
+              <p className="text-gray-600 mb-4">Start building your rental portfolio by adding your first property.</p>
+              <Button 
+                onClick={handleAddProperty}
+                className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Property
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {userProperties.map((property) => (
+              <Card key={property.id} className="overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{property.title}</CardTitle>
+                      <CardDescription className="flex items-center mt-1">
+                        {property.address}
+                        {property.city && `, ${property.city}`}
+                        {property.state && `, ${property.state}`}
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteProperty(property.id!)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Delete
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteProperty(property.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-[#1277e1]">
-                      ${property.rent.toLocaleString()}/mo
-                    </span>
-                    {property.type && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
-                        {property.type}
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-[#1277e1]">
+                        ${property.rent.toLocaleString()}/mo
                       </span>
-                    )}
-                  </div>
-                  
-                  {(property.bedrooms || property.bathrooms || property.sqft) && (
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      {property.bedrooms && (
-                        <div className="flex items-center">
-                          <span>{property.bedrooms} bed</span>
-                        </div>
-                      )}
-                      {property.bathrooms && (
-                        <div className="flex items-center">
-                          <span>{property.bathrooms} bath</span>
-                        </div>
-                      )}
-                      {property.sqft && (
-                        <div className="flex items-center">
-                          <span>{property.sqft} sqft</span>
-                        </div>
+                      {property.property_type && (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
+                          {property.property_type}
+                        </span>
                       )}
                     </div>
-                  )}
+                    
+                    {(property.bedrooms || property.bathrooms || property.sqft) && (
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        {property.bedrooms && (
+                          <div className="flex items-center">
+                            <span>{property.bedrooms} bed</span>
+                          </div>
+                        )}
+                        {property.bathrooms && (
+                          <div className="flex items-center">
+                            <span>{property.bathrooms} bath</span>
+                          </div>
+                        )}
+                        {property.sqft && (
+                          <div className="flex items-center">
+                            <span>{property.sqft} sqft</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  {property.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {property.description}
-                    </p>
-                  )}
+                    {property.description && (
+                      <p className="text-sm text-gray-600 line-clamp-2">
+                        {property.description}
+                      </p>
+                    )}
 
-                  {property.amenities && (
+                    {property.amenities && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">
+                          <span className="font-medium">Amenities:</span> {property.amenities}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="pt-2 border-t">
                       <p className="text-xs text-gray-500">
-                        <span className="font-medium">Amenities:</span> {property.amenities}
+                        Added: {property.created_at ? new Date(property.created_at).toLocaleDateString() : 'Unknown'}
                       </p>
                     </div>
-                  )}
-
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-gray-500">
-                      Added: {new Date(property.dateAdded).toLocaleDateString()}
-                    </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -307,11 +347,11 @@ const ManageRentals = () => {
                     </div>
                     
                     <div>
-                      <Label htmlFor="zipCode">ZIP Code</Label>
+                      <Label htmlFor="zip_code">ZIP Code</Label>
                       <Input
-                        id="zipCode"
-                        value={propertyForm.zipCode}
-                        onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                        id="zip_code"
+                        value={propertyForm.zip_code}
+                        onChange={(e) => handleInputChange('zip_code', e.target.value)}
                         placeholder="ZIP Code"
                       />
                     </div>
@@ -374,8 +414,8 @@ const ManageRentals = () => {
                     </div>
                     
                     <div>
-                      <Label htmlFor="type">Property Type</Label>
-                      <Select value={propertyForm.type} onValueChange={(value) => handleInputChange('type', value)}>
+                      <Label htmlFor="property_type">Property Type</Label>
+                      <Select value={propertyForm.property_type} onValueChange={(value) => handleInputChange('property_type', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>

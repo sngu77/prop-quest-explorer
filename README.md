@@ -1,73 +1,106 @@
-# Welcome to your Lovable project
+# Property Management App with Supabase
 
-## Project info
+This application now uses Supabase as the database backend for storing and managing rental properties.
 
-**URL**: https://lovable.dev/projects/53e18b04-ccfb-4ed2-9965-5317911f3029
+## Database Setup Instructions
 
-## How can I edit this code?
+### Option 1: Use Supabase (Recommended)
 
-There are several ways of editing your application.
+1. **Create a Supabase Account**
+   - Go to [supabase.com](https://supabase.com)
+   - Sign up for a free account
+   - Create a new project
 
-**Use Lovable**
+2. **Get Your Credentials**
+   - In your Supabase dashboard, go to Settings > API
+   - Copy your Project URL and anon public key
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/53e18b04-ccfb-4ed2-9965-5317911f3029) and start prompting.
+3. **Set Environment Variables**
+   - Create a `.env` file in your project root
+   - Add your Supabase credentials:
+   ```
+   VITE_SUPABASE_URL=your_project_url_here
+   VITE_SUPABASE_ANON_KEY=your_anon_key_here
+   ```
 
-Changes made via Lovable will be committed automatically to this repo.
+4. **Run Database Migration**
+   - In your Supabase dashboard, go to SQL Editor
+   - Copy and paste the contents of `supabase/migrations/create_properties_schema.sql`
+   - Run the SQL to create your database tables
 
-**Use your preferred IDE**
+### Option 2: Alternative Databases
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you prefer a different database solution:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+#### Firebase/Firestore
+- Good for real-time features
+- Easy Google integration
+- NoSQL database
 
-Follow these steps:
+#### PlanetScale
+- MySQL-compatible
+- Excellent for scaling
+- Branching for database schema changes
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+#### Railway + PostgreSQL
+- Simple deployment
+- PostgreSQL database
+- Good for full-stack apps
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Features
 
-# Step 3: Install the necessary dependencies.
-npm i
+✅ **Property Management**
+- Add, edit, delete rental properties
+- Store property details (rent, bedrooms, bathrooms, etc.)
+- User authentication and data isolation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+✅ **Real-time Updates**
+- Properties update in real-time across devices
+- Automatic data synchronization
 
-**Edit a file directly in GitHub**
+✅ **Secure Data**
+- Row Level Security (RLS) ensures users only see their own data
+- Built-in authentication with Supabase Auth
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Database Schema
 
-**Use GitHub Codespaces**
+### Properties Table
+- `id` - Unique identifier
+- `user_id` - Links to authenticated user
+- `title` - Property name
+- `address` - Street address
+- `city`, `state`, `zip_code` - Location details
+- `rent` - Monthly rent amount
+- `bedrooms`, `bathrooms`, `sqft` - Property specs
+- `property_type` - apartment, house, condo, townhouse
+- `description` - Property description
+- `amenities` - Available amenities
+- `created_at`, `updated_at` - Timestamps
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Rental Applications Table
+- `id` - Unique identifier
+- `property_id` - Links to property
+- `applicant_name`, `applicant_email`, `applicant_phone` - Contact info
+- `income`, `credit_score` - Financial details
+- `status` - pending, approved, rejected
+- `applied_date` - When application was submitted
 
-## What technologies are used for this project?
+## Getting Started
 
-This project is built with:
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up your database (see instructions above)
+4. Add environment variables
+5. Run the development server: `npm run dev`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Tech Stack
 
-## How can I deploy this project?
+- **Frontend**: React + TypeScript + Vite
+- **UI**: Tailwind CSS + shadcn/ui
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Real-time**: Supabase Realtime
 
-Simply open [Lovable](https://lovable.dev/projects/53e18b04-ccfb-4ed2-9965-5317911f3029) and click on Share -> Publish.
+## Support
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+If you need help setting up the database or have questions about the implementation, feel free to ask!
