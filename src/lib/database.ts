@@ -15,6 +15,14 @@ export interface Property {
   property_type: string;
   description: string;
   amenities: string;
+  year_built?: string;
+  lease_term?: string;
+  security_deposit?: number;
+  pet_policy?: string;
+  smoking_policy?: string;
+  available_date?: string;
+  contact_email?: string;
+  contact_phone?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -47,6 +55,22 @@ export const propertyService = {
     }
 
     return data || [];
+  },
+
+  // Get a single property by ID
+  async getProperty(id: string): Promise<Property | null> {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching property:', error);
+      throw error;
+    }
+
+    return data;
   },
 
   // Add a new property
@@ -102,6 +126,28 @@ export const propertyService = {
       console.error('Error deleting property:', error);
       throw error;
     }
+  },
+
+  // Get property statistics
+  async getPropertyStats(): Promise<{
+    totalProperties: number;
+    totalRent: number;
+    averageRent: number;
+    occupiedProperties: number;
+  }> {
+    const properties = await this.getProperties();
+    
+    const totalProperties = properties.length;
+    const totalRent = properties.reduce((sum, prop) => sum + prop.rent, 0);
+    const averageRent = totalProperties > 0 ? totalRent / totalProperties : 0;
+    const occupiedProperties = Math.floor(totalProperties * 0.8); // Mock data
+
+    return {
+      totalProperties,
+      totalRent,
+      averageRent,
+      occupiedProperties
+    };
   }
 };
 

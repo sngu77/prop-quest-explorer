@@ -1,42 +1,81 @@
-import { ArrowLeft, Plus, Building2, Users, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Building2, Users, DollarSign, Calendar, Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { propertyService, type Property } from '@/lib/database';
+import PropertyForm from '@/components/property/PropertyForm';
+import PropertyCard from '@/components/property/PropertyCard';
 import RentalApplications from '@/components/rental/RentalApplications';
 import RentalIncome from '@/components/rental/RentalIncome';
 
 const ManageRentals = () => {
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [isEditPropertyOpen, setIsEditPropertyOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [userProperties, setUserProperties] = useState<Property[]>([]);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [propertyForm, setPropertyForm] = useState({
-    title: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    rent: '',
-    bedrooms: '',
-    bathrooms: '',
-    sqft: '',
-    property_type: '',
-    description: '',
-    amenities: ''
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [stats, setStats] = useState({
+    totalProperties: 0,
+    totalRent: 0,
+    averageRent: 0,
+    occupiedProperties: 0
   });
 
   // Load properties on component mount
   useEffect(() => {
     loadProperties();
+    loadStats();
   }, []);
+
+  // Filter and search properties
+  useEffect(() => {
+    let filtered = [...userProperties];
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(property =>
+        property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.city.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(property => property.property_type === filterType);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'newest':
+        filtered.sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime());
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
+        break;
+      case 'rent-high':
+        filtered.sort((a, b) => b.rent - a.rent);
+        break;
+      case 'rent-low':
+        filtered.sort((a, b) => a.rent - b.rent);
+        break;
+      case 'title':
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+
+    setFilteredProperties(filtered);
+  }, [userProperties, searchTerm, filterType, sortBy]);
 
   const loadProperties = async () => {
     try {
@@ -55,66 +94,35 @@ const ManageRentals = () => {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const propertyStats = await propertyService.getPropertyStats();
+      setStats(propertyStats);
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
   const handleAddProperty = () => {
     setIsAddPropertyOpen(true);
   };
 
-  const handleSubmitProperty = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Basic validation
-    if (!propertyForm.title || !propertyForm.address || !propertyForm.rent) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields (Title, Address, Rent)",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleEditProperty = (property: Property) => {
+    setEditingProperty(property);
+    setIsEditPropertyOpen(true);
+  };
 
+  const handleSubmitProperty = async (formData: any) => {
     try {
-      // Create new property object
-      const newProperty = {
-        title: propertyForm.title,
-        address: propertyForm.address,
-        city: propertyForm.city,
-        state: propertyForm.state,
-        zip_code: propertyForm.zip_code,
-        rent: parseFloat(propertyForm.rent),
-        bedrooms: propertyForm.bedrooms,
-        bathrooms: propertyForm.bathrooms,
-        sqft: propertyForm.sqft,
-        property_type: propertyForm.property_type,
-        description: propertyForm.description,
-        amenities: propertyForm.amenities
-      };
-
-      // Save to database
-      await propertyService.addProperty(newProperty);
-      
-      // Reload properties
+      await propertyService.addProperty(formData);
       await loadProperties();
+      await loadStats();
       
       toast({
         title: "Success",
         description: "Property added successfully!"
       });
 
-      // Reset form and close dialog
-      setPropertyForm({
-        title: '',
-        address: '',
-        city: '',
-        state: '',
-        zip_code: '',
-        rent: '',
-        bedrooms: '',
-        bathrooms: '',
-        sqft: '',
-        property_type: '',
-        description: '',
-        amenities: ''
-      });
       setIsAddPropertyOpen(false);
     } catch (error) {
       console.error('Error adding property:', error);
@@ -126,17 +134,36 @@ const ManageRentals = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setPropertyForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleUpdateProperty = async (formData: any) => {
+    if (!editingProperty?.id) return;
+
+    try {
+      await propertyService.updateProperty(editingProperty.id, formData);
+      await loadProperties();
+      await loadStats();
+      
+      toast({
+        title: "Success",
+        description: "Property updated successfully!"
+      });
+
+      setIsEditPropertyOpen(false);
+      setEditingProperty(null);
+    } catch (error) {
+      console.error('Error updating property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update property. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleDeleteProperty = async (id: string) => {
     try {
       await propertyService.deleteProperty(id);
       await loadProperties();
+      await loadStats();
       toast({
         title: "Property Deleted",
         description: "Property has been removed from your portfolio."
@@ -151,8 +178,7 @@ const ManageRentals = () => {
     }
   };
 
-  // Custom Properties Component
-  const UserPropertiesComponent = () => {
+  const PropertiesTab = () => {
     if (isLoading) {
       return (
         <div className="flex items-center justify-center p-8">
@@ -166,100 +192,103 @@ const ManageRentals = () => {
 
     return (
       <div className="space-y-6">
-        {userProperties.length === 0 ? (
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search properties by title, address, or city..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Property Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="apartment">Apartment</SelectItem>
+                    <SelectItem value="house">House</SelectItem>
+                    <SelectItem value="condo">Condo</SelectItem>
+                    <SelectItem value="townhouse">Townhouse</SelectItem>
+                    <SelectItem value="studio">Studio</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="rent-high">Rent: High to Low</SelectItem>
+                    <SelectItem value="rent-low">Rent: Low to High</SelectItem>
+                    <SelectItem value="title">Title A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Results count */}
+            <div className="mt-4 text-sm text-gray-600">
+              Showing {filteredProperties.length} of {userProperties.length} properties
+              {searchTerm && ` for "${searchTerm}"`}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Properties Grid */}
+        {filteredProperties.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Yet</h3>
-              <p className="text-gray-600 mb-4">Start building your rental portfolio by adding your first property.</p>
-              <Button 
-                onClick={handleAddProperty}
-                className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Property
-              </Button>
+              {userProperties.length === 0 ? (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Yet</h3>
+                  <p className="text-gray-600 mb-4">Start building your rental portfolio by adding your first property.</p>
+                  <Button 
+                    onClick={handleAddProperty}
+                    className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Property
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Found</h3>
+                  <p className="text-gray-600 mb-4">Try adjusting your search or filter criteria.</p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilterType('all');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {userProperties.map((property) => (
-              <Card key={property.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{property.title}</CardTitle>
-                      <CardDescription className="flex items-center mt-1">
-                        {property.address}
-                        {property.city && `, ${property.city}`}
-                        {property.state && `, ${property.state}`}
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteProperty(property.id!)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold text-[#1277e1]">
-                        ${property.rent.toLocaleString()}/mo
-                      </span>
-                      {property.property_type && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
-                          {property.property_type}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {(property.bedrooms || property.bathrooms || property.sqft) && (
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        {property.bedrooms && (
-                          <div className="flex items-center">
-                            <span>{property.bedrooms} bed</span>
-                          </div>
-                        )}
-                        {property.bathrooms && (
-                          <div className="flex items-center">
-                            <span>{property.bathrooms} bath</span>
-                          </div>
-                        )}
-                        {property.sqft && (
-                          <div className="flex items-center">
-                            <span>{property.sqft} sqft</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {property.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {property.description}
-                      </p>
-                    )}
-
-                    {property.amenities && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-gray-500">
-                          <span className="font-medium">Amenities:</span> {property.amenities}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-gray-500">
-                        Added: {property.created_at ? new Date(property.created_at).toLocaleDateString() : 'Unknown'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {filteredProperties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                onEdit={handleEditProperty}
+                onDelete={handleDeleteProperty}
+              />
             ))}
           </div>
         )}
@@ -284,187 +313,13 @@ const ManageRentals = () => {
               <h1 className="text-2xl font-bold text-[#1277e1]">Manage Rentals</h1>
             </div>
             
-            <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={handleAddProperty}
-                  className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Property
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add New Property</DialogTitle>
-                  <DialogDescription>
-                    Fill in the details below to add a new rental property to your portfolio.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <form onSubmit={handleSubmitProperty} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <Label htmlFor="title">Property Title *</Label>
-                      <Input
-                        id="title"
-                        value={propertyForm.title}
-                        onChange={(e) => handleInputChange('title', e.target.value)}
-                        placeholder="e.g., Modern Downtown Apartment"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label htmlFor="address">Address *</Label>
-                      <Input
-                        id="address"
-                        value={propertyForm.address}
-                        onChange={(e) => handleInputChange('address', e.target.value)}
-                        placeholder="Street address"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={propertyForm.city}
-                        onChange={(e) => handleInputChange('city', e.target.value)}
-                        placeholder="City"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        value={propertyForm.state}
-                        onChange={(e) => handleInputChange('state', e.target.value)}
-                        placeholder="State"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="zip_code">ZIP Code</Label>
-                      <Input
-                        id="zip_code"
-                        value={propertyForm.zip_code}
-                        onChange={(e) => handleInputChange('zip_code', e.target.value)}
-                        placeholder="ZIP Code"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="rent">Monthly Rent *</Label>
-                      <Input
-                        id="rent"
-                        type="number"
-                        value={propertyForm.rent}
-                        onChange={(e) => handleInputChange('rent', e.target.value)}
-                        placeholder="2500"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="bedrooms">Bedrooms</Label>
-                      <Select value={propertyForm.bedrooms} onValueChange={(value) => handleInputChange('bedrooms', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select bedrooms" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 Bedroom</SelectItem>
-                          <SelectItem value="2">2 Bedrooms</SelectItem>
-                          <SelectItem value="3">3 Bedrooms</SelectItem>
-                          <SelectItem value="4">4 Bedrooms</SelectItem>
-                          <SelectItem value="5">5+ Bedrooms</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="bathrooms">Bathrooms</Label>
-                      <Select value={propertyForm.bathrooms} onValueChange={(value) => handleInputChange('bathrooms', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select bathrooms" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 Bathroom</SelectItem>
-                          <SelectItem value="1.5">1.5 Bathrooms</SelectItem>
-                          <SelectItem value="2">2 Bathrooms</SelectItem>
-                          <SelectItem value="2.5">2.5 Bathrooms</SelectItem>
-                          <SelectItem value="3">3 Bathrooms</SelectItem>
-                          <SelectItem value="3.5">3.5 Bathrooms</SelectItem>
-                          <SelectItem value="4">4+ Bathrooms</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="sqft">Square Feet</Label>
-                      <Input
-                        id="sqft"
-                        type="number"
-                        value={propertyForm.sqft}
-                        onChange={(e) => handleInputChange('sqft', e.target.value)}
-                        placeholder="1200"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="property_type">Property Type</Label>
-                      <Select value={propertyForm.property_type} onValueChange={(value) => handleInputChange('property_type', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="apartment">Apartment</SelectItem>
-                          <SelectItem value="house">House</SelectItem>
-                          <SelectItem value="condo">Condo</SelectItem>
-                          <SelectItem value="townhouse">Townhouse</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={propertyForm.description}
-                        onChange={(e) => handleInputChange('description', e.target.value)}
-                        placeholder="Describe the property features, location benefits, etc."
-                        rows={3}
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label htmlFor="amenities">Amenities</Label>
-                      <Input
-                        id="amenities"
-                        value={propertyForm.amenities}
-                        onChange={(e) => handleInputChange('amenities', e.target.value)}
-                        placeholder="Pool, Gym, Parking, etc. (comma separated)"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setIsAddPropertyOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="bg-[#1277e1] hover:bg-[#0f5bb8]">
-                      Add Property
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              onClick={handleAddProperty}
+              className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Property
+            </Button>
           </div>
         </div>
       </header>
@@ -479,19 +334,8 @@ const ManageRentals = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{userProperties.length}</div>
+              <div className="text-2xl font-bold">{stats.totalProperties}</div>
               <p className="text-xs text-muted-foreground">Your rental portfolio</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-xs text-muted-foreground">Occupied units</p>
             </CardContent>
           </Card>
 
@@ -501,21 +345,38 @@ const ManageRentals = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${userProperties.reduce((total, property) => total + property.rent, 0).toLocaleString()}
+              <div className="text-2xl font-bold text-green-600">
+                ${stats.totalRent.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">From your properties</p>
+              <p className="text-xs text-muted-foreground">Total potential income</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Applications</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Average Rent</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">5</div>
-              <p className="text-xs text-muted-foreground">Require review</p>
+              <div className="text-2xl font-bold">
+                ${Math.round(stats.averageRent).toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">Per property</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.totalProperties > 0 ? Math.round((stats.occupiedProperties / stats.totalProperties) * 100) : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats.occupiedProperties} of {stats.totalProperties} occupied
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -523,13 +384,13 @@ const ManageRentals = () => {
         {/* Tabs */}
         <Tabs defaultValue="properties" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="properties">My Properties</TabsTrigger>
+            <TabsTrigger value="properties">My Properties ({userProperties.length})</TabsTrigger>
             <TabsTrigger value="applications">Applications</TabsTrigger>
             <TabsTrigger value="income">Income</TabsTrigger>
           </TabsList>
 
           <TabsContent value="properties">
-            <UserPropertiesComponent />
+            <PropertiesTab />
           </TabsContent>
 
           <TabsContent value="applications">
@@ -541,6 +402,47 @@ const ManageRentals = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Add Property Dialog */}
+      <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Property</DialogTitle>
+            <DialogDescription>
+              Fill in the details below to add a new rental property to your portfolio.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <PropertyForm
+            onSubmit={handleSubmitProperty}
+            onCancel={() => setIsAddPropertyOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Property Dialog */}
+      <Dialog open={isEditPropertyOpen} onOpenChange={setIsEditPropertyOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Property</DialogTitle>
+            <DialogDescription>
+              Update the property information below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingProperty && (
+            <PropertyForm
+              initialData={editingProperty}
+              onSubmit={handleUpdateProperty}
+              onCancel={() => {
+                setIsEditPropertyOpen(false);
+                setEditingProperty(null);
+              }}
+              isEditing={true}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
