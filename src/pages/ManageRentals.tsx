@@ -10,12 +10,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import RentalProperties from '@/components/rental/RentalProperties';
 import RentalApplications from '@/components/rental/RentalApplications';
 import RentalIncome from '@/components/rental/RentalIncome';
 
+interface UserProperty {
+  id: string;
+  title: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  rent: number;
+  bedrooms: string;
+  bathrooms: string;
+  sqft: string;
+  type: string;
+  description: string;
+  amenities: string;
+  dateAdded: string;
+}
+
 const ManageRentals = () => {
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [userProperties, setUserProperties] = useState<UserProperty[]>([]);
   const [propertyForm, setPropertyForm] = useState({
     title: '',
     address: '',
@@ -48,8 +65,26 @@ const ManageRentals = () => {
       return;
     }
 
-    // Here you would typically save to a database
-    console.log('Adding new property:', propertyForm);
+    // Create new property object
+    const newProperty: UserProperty = {
+      id: Date.now().toString(),
+      title: propertyForm.title,
+      address: propertyForm.address,
+      city: propertyForm.city,
+      state: propertyForm.state,
+      zipCode: propertyForm.zipCode,
+      rent: parseFloat(propertyForm.rent),
+      bedrooms: propertyForm.bedrooms,
+      bathrooms: propertyForm.bathrooms,
+      sqft: propertyForm.sqft,
+      type: propertyForm.type,
+      description: propertyForm.description,
+      amenities: propertyForm.amenities,
+      dateAdded: new Date().toISOString()
+    };
+
+    // Add to properties list
+    setUserProperties(prev => [...prev, newProperty]);
     
     toast({
       title: "Success",
@@ -80,6 +115,117 @@ const ManageRentals = () => {
       [field]: value
     }));
   };
+
+  const handleDeleteProperty = (id: string) => {
+    setUserProperties(prev => prev.filter(property => property.id !== id));
+    toast({
+      title: "Property Deleted",
+      description: "Property has been removed from your portfolio."
+    });
+  };
+
+  // Custom Properties Component
+  const UserPropertiesComponent = () => (
+    <div className="space-y-6">
+      {userProperties.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Properties Yet</h3>
+            <p className="text-gray-600 mb-4">Start building your rental portfolio by adding your first property.</p>
+            <Button 
+              onClick={handleAddProperty}
+              className="bg-[#1277e1] hover:bg-[#0f5bb8] text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Property
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {userProperties.map((property) => (
+            <Card key={property.id} className="overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{property.title}</CardTitle>
+                    <CardDescription className="flex items-center mt-1">
+                      {property.address}
+                      {property.city && `, ${property.city}`}
+                      {property.state && `, ${property.state}`}
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteProperty(property.id)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-[#1277e1]">
+                      ${property.rent.toLocaleString()}/mo
+                    </span>
+                    {property.type && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full capitalize">
+                        {property.type}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {(property.bedrooms || property.bathrooms || property.sqft) && (
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      {property.bedrooms && (
+                        <div className="flex items-center">
+                          <span>{property.bedrooms} bed</span>
+                        </div>
+                      )}
+                      {property.bathrooms && (
+                        <div className="flex items-center">
+                          <span>{property.bathrooms} bath</span>
+                        </div>
+                      )}
+                      {property.sqft && (
+                        <div className="flex items-center">
+                          <span>{property.sqft} sqft</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {property.description && (
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {property.description}
+                    </p>
+                  )}
+
+                  {property.amenities && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-gray-500">
+                        <span className="font-medium">Amenities:</span> {property.amenities}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-gray-500">
+                      Added: {new Date(property.dateAdded).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -293,8 +439,8 @@ const ManageRentals = () => {
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">+2 from last month</p>
+              <div className="text-2xl font-bold">{userProperties.length}</div>
+              <p className="text-xs text-muted-foreground">Your rental portfolio</p>
             </CardContent>
           </Card>
 
@@ -315,8 +461,10 @@ const ManageRentals = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$24,600</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <div className="text-2xl font-bold">
+                ${userProperties.reduce((total, property) => total + property.rent, 0).toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">From your properties</p>
             </CardContent>
           </Card>
 
@@ -335,13 +483,13 @@ const ManageRentals = () => {
         {/* Tabs */}
         <Tabs defaultValue="properties" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="properties">Properties</TabsTrigger>
+            <TabsTrigger value="properties">My Properties</TabsTrigger>
             <TabsTrigger value="applications">Applications</TabsTrigger>
             <TabsTrigger value="income">Income</TabsTrigger>
           </TabsList>
 
           <TabsContent value="properties">
-            <RentalProperties />
+            <UserPropertiesComponent />
           </TabsContent>
 
           <TabsContent value="applications">
