@@ -43,7 +43,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         <div className="relative h-56 overflow-hidden">
           <img
             src={property.images[currentImageIndex]}
-            alt={property.title}
+            alt={`${property.title} at ${property.address}, ${property.city}, ${property.state}`}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           

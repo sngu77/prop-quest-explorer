@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import PropertyCardSkeleton from '@/components/PropertyCardSkeleton';
+import EmptyState from '@/components/EmptyState';
 
 const Index = () => {
   const [showFilters, setShowFilters] = useState(false);
@@ -26,6 +28,7 @@ const Index = () => {
     propertyType: "all",
     amenities: []
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check initial auth state
@@ -39,6 +42,11 @@ const Index = () => {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setIsLoading(false), 700);
+    return () => clearTimeout(t);
   }, []);
 
   const handleFiltersChange = (newFilters: FilterState) => {
@@ -292,9 +300,25 @@ const Index = () => {
           {/* Properties List */}
           <div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {mockProperties.map((property) => (
-                <PropertyCard key={property.id} property={property} />
-              ))}
+              {isLoading ? (
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <PropertyCardSkeleton key={idx} />
+                ))
+              ) : mockProperties.length === 0 ? (
+                <div className="col-span-full">
+                  <EmptyState
+                    onAction={() => {
+                      setSearchLocation("");
+                      setSelectedPropertyType("all");
+                      setFilters({ priceRange: [0, 2000000], bedrooms: 0, bathrooms: 0, propertyType: "all", amenities: [] });
+                    }}
+                  />
+                </div>
+              ) : (
+                mockProperties.map((property) => (
+                  <PropertyCard key={property.id} property={property} />
+                ))
+              )}
             </div>
           </div>
 
